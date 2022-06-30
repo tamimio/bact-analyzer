@@ -8,24 +8,15 @@ import cv2
 from PIL import Image
 from matplotlib import pyplot as plt
 
-'''
-# -d <directory> - segment all files in directory, save in result/<directory>_segm_method
-# -m <method> - segment directory with specific method
 
-# -f <filename>  - segment 1 file, save as grid in result/<filename>_segm
-'''
-
-DB_PATH  = '/media/DISK3/Bacteria_db/2021_2022/splitted/'
-FILENAME = 'train/Acinetobacter baumannii/Снимок-4759.jpg'
-
-def open_image(filename):
+def open_image( filename ):
     img_orig = plt.imread( filename ) 
     img_bw = cv2.cvtColor(img_orig, cv2.COLOR_BGR2GRAY)
 
     images_for_grid = [Image.fromarray(img_orig.astype('uint8')), Image.fromarray(img_bw.astype('uint8'))]
     
     return img_orig, img_bw, images_for_grid
-    
+
 def image_grid(imgs, rows, cols):
     assert len(imgs) == rows*cols
 
@@ -37,7 +28,7 @@ def image_grid(imgs, rows, cols):
         grid.paste(img, box=(i%cols*w, i//cols*h))
     return grid
 
-def create_sample(image, images_for_grid):
+def create_sample( image, images_for_grid ):
     ## 1 OTSU
     ret, res = cv2.threshold(image, 0,255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
     res      = Image.fromarray(res.astype('uint8'))
@@ -84,50 +75,71 @@ def create_sample(image, images_for_grid):
     
     return grid
 
-def create_sample_for_set(set_type='train'):
-    print('create_sample_for_set')
+def save_sample ( directory, filename, sample_image ):
+    filename_to_save = filename.split('.')[0]# + '_segm'
+    sample_image.save(f'{directory}/{filename_to_save}.jpg')
 
-
-species_folder = 'train/Acinetobacter baumannii'
-directory_name = f'/media/DISK3/Bacteria_db/2021_2022/splitted/{species_folder}'
-directory = os.fsencode(directory_name)
-
-# create folder
-folder_name = species_folder.replace('/', '_')
-Path(f'./result/samples_{folder_name}').mkdir(parents=True, exist_ok=True)
-
-SAMPLES_COUNT = 15
-
-for subdir, dirs, files in os.walk('/media/DISK3/Bacteria_db/2021_2022/splitted/train'):
-    
-    for dir in dirs:
-        print ( os.path.join(subdir, dir) )
-
-for file in os.listdir(directory):
-    filename = os.fsdecode(file)
-        
-    # OPEN IMAGE
-    
-    _, img, grid_sample = open_image( f'{directory_name}/{filename}' )
-    
-    # img_orig = plt.imread(f'{directory_name}/{filename}') #(f'{DB_PATH}{FILENAME}')
-    # img_bw = cv2.cvtColor(img_orig, cv2.COLOR_BGR2GRAY)
-
-    # images_for_grid = [Image.fromarray(img_orig.astype('uint8')), Image.fromarray(img_bw.astype('uint8'))]
-
-    # SEGMENTATION 1-N
+def create_sample_for_image( full_filename, output_filename='' ):
+    _, img, grid_sample = open_image( full_filename )
 
     grid_sample = create_sample( img, grid_sample )
 
-    # SAVE
+    if output_filename == '':
+        output_filename = '_'.join( full_filename.split('/')[-2:] )
+        output_filename = output_filename.split('.')[0]
+        output_filename = 'sample_'+output_filename
+
+    save_sample( f'./result/', output_filename, grid_sample )
+
+def create_sample_for_class( directory, class_name, _num ):
+    print ( f'Creating samples for {class_name}...' )
+
+    supdir = directory.split('/')[-1]
+    directory = f'{directory}/{class_name}'
+
+    # create resulting folder
+    samples_folder_name = f"samples_{supdir}_{class_name.replace('/', '_')}"
+    Path(f'./result/{samples_folder_name}').mkdir(parents=True, exist_ok=True)
+
+    for file in os.listdir(directory):
+        if _num == 0:
+            break
+        else:
+            _num-=1
     
-    # save image
-    filename_to_save = filename.split('.')[0]    # filename_to_save = FILENAME.split('.')[0]
-    # # filename_to_save = filename_to_save.replace('/', '_')
-    grid_sample.save(f'./result/samples_{folder_name}/{filename_to_save}_segm.jpg')
+        filename = os.fsdecode(file)
+
+        create_sample_for_image( f'{directory}/{filename}', f'{samples_folder_name}/{filename}' )
+
+def create_sample_for_set( directory, set_type='train' ):
+    print ( f'Creating samples for {set_type} set in {directory}...' )
+
+    directory = f'{directory}/{set_type}'
     
-    SAMPLES_COUNT -= 1
-    if SAMPLES_COUNT == 0:
-        break
+    for subdir, dirs, files in os.walk(directory):
+        for species in dirs:
+            create_sample_for_class( directory, species, SAMPLES_COUNT )
+
+
+
+DATASET_PATH  = '/media/DISK3/Bacteria_db/2021_2022/splitted'
+SAMPLES_COUNT = 15
+
+### SAMPLES FOR 1 IMAGE
+
+create_sample_for_image( f'{DATASET_PATH}/train/Candida albicans/1.jpeg' )
+
+### SAMPLES FOR 1 CLASS
+
+create_sample_for_class( f'{DATASET_PATH}/train', 'Acinetobacter baumannii', SAMPLES_COUNT )
+
+### SAMPLES FOR ALL CLASSES IN SET
+
+# create_sample_for_set( DATASET_PATH, 'train' )
+
+### SAMPLES FOR WHOLE DATASET
+
+# for set_type in ['train', 'test']:
+#     create_sample_for_set( DATASET_PATH, set_type )
 
 print('do_segm.py finished')

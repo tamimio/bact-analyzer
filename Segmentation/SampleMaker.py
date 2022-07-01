@@ -3,9 +3,9 @@ from utils import *
 import os
 from pathlib import Path
 
-import cv2
 from PIL import Image
-from matplotlib import pyplot as plt
+
+from Segmentator import Segmentator
 
 class SampleMaker:
 	grid = []
@@ -22,50 +22,13 @@ class SampleMaker:
 		print(f'Number of samples: {self.samples_number}')
 		print('SampleMaker is ready.')
 		
-	def add_to_grid( self, image ):
-		self.grid.append( Image.fromarray(image.astype('uint8')) )
-        
+	def add_to_grid( self, images ):
+		for image in images:
+			self.grid.append( Image.fromarray(image.astype('uint8')) )
+
 	def create_sample( self, image ):
-		## 1 OTSU
-		ret, res = cv2.threshold(image, 0,255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-		self.add_to_grid( res )
-
-		## 2 THRESH_BINARY
-		for val in [100, 110, 120, 130, 140, 150]:
-			ret,res = cv2.threshold(image, val+10, 255, cv2.THRESH_BINARY)
-			self.add_to_grid( res )
-
-		## 3 adaptiveThreshold
-
-		### mean , gaussian
-		param1 = 11
-		param2 =  5
-
-		# 11,2 ; 3,4
-
-		for thr_type in [ cv2.ADAPTIVE_THRESH_MEAN_C, cv2.ADAPTIVE_THRESH_GAUSSIAN_C ]:
-
-			res = cv2.adaptiveThreshold(image, 255, thr_type, cv2.THRESH_BINARY, param1-4,param2-2)
-			self.add_to_grid( res )
-			res = cv2.adaptiveThreshold(image, 255, thr_type, cv2.THRESH_BINARY, param1,param2)
-			self.add_to_grid( res )
-			res = cv2.adaptiveThreshold(image, 255, thr_type, cv2.THRESH_BINARY, param1+4,param2+2)
-			self.add_to_grid( res )
-
-			res = cv2.adaptiveThreshold(image, 255, thr_type, cv2.THRESH_BINARY, param1-4,param2)
-			self.add_to_grid( res )
-			res = cv2.adaptiveThreshold(image, 255, thr_type, cv2.THRESH_BINARY, param1-4,param2+2) #
-			self.add_to_grid( res )
-			res = cv2.adaptiveThreshold(image, 255, thr_type, cv2.THRESH_BINARY, param1+4,param2)
-			self.add_to_grid( res )
-
-			res = cv2.adaptiveThreshold(image, 255, thr_type, cv2.THRESH_BINARY, param1,param2-2)
-			self.add_to_grid( res )
-			res = cv2.adaptiveThreshold(image, 255, thr_type, cv2.THRESH_BINARY, param1+4,param2-2)
-			self.add_to_grid( res )
-			res = cv2.adaptiveThreshold(image, 255, thr_type, cv2.THRESH_BINARY, param1,param2+2)
-			self.add_to_grid( res )
-			
+		results = Segmentator.process( image )
+		self.add_to_grid( results )
 
 	def save_sample ( self, directory, filename, sample_image ):
 		filename_to_save = filename.split('.')[0]# + '_segm'
@@ -74,11 +37,13 @@ class SampleMaker:
 	def process_image( self, full_filename, output_filename='' ):
 		img_orig, img = open_image( full_filename )
         
-		self.add_to_grid( img_orig )
-		self.add_to_grid( img )
+		self.add_to_grid( [img_orig, img] )
         
 		self.create_sample( img )
-		self.grid = image_grid(self.grid, rows=9, cols=3)
+        
+		_cols = 3
+		_rows = len(self.grid) // 3
+		self.grid = image_grid(self.grid, rows=_rows, cols=_cols)
 
 		if output_filename == '':
 			output_filename = '_'.join( full_filename.split('/')[-2:] )

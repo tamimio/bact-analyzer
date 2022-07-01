@@ -10,11 +10,11 @@ sample_maker = SampleMaker( DATASET_PATH, samples_number = SAMPLES_COUNT )
 
 ### SAMPLES FOR 1 IMAGE
 
-sample_maker.process_image( DATASET_PATH+'train/Candida albicans/3.jpeg' )
+sample_maker.process_image( DATASET_PATH+'train/Candida albicans/2.jpeg' )
 
 ### SAMPLES FOR 1 CLASS
 
-sample_maker.process_class( class_name='Acinetobacter baumannii' )
+#sample_maker.process_class( class_name='Acinetobacter baumannii' )
 
 ### SAMPLES FOR ALL CLASSES IN SET
 

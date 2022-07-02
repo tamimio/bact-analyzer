@@ -1,4 +1,7 @@
+from utils import create_range
+
 import cv2
+import numpy as np
 
 class Segmentator:
     @classmethod
@@ -13,7 +16,7 @@ class Segmentator:
         if not cls.is_bw(image):
             return  cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         return image
-
+        
     @classmethod
     def segm_Otsu( cls, image ):
         image = cls.prepare_image( image )
@@ -37,33 +40,49 @@ class Segmentator:
         return res
 
     @classmethod
-    def process( cls, image ):
+    def segm_fin( cls, image, _acc=0.01 ): # base: https://www.askpython.com/python/examples/image-segmentation
+        kernel = np.ones((2, 2), np.uint8)
+        closing = cv2.morphologyEx(image, cv2.MORPH_CLOSE,kernel, iterations = 1)
+        bg = cv2.dilate(closing, kernel, iterations = 1)
+        dist_transform = cv2.distanceTransform(closing, cv2.DIST_L2, 0)
+        ret, res = cv2.threshold(dist_transform, _acc*dist_transform.max(), 255, 0)
+        return res.astype(np.uint8)
+
+    @classmethod
+    def apply_mask( cls, image, mask_inv ):
+        return cv2.bitwise_and( image, image, mask = cv2.bitwise_not(mask_inv) )
+
+    @classmethod
+    def process( cls, image, _postprocess_mask=False, _apply_mask=False ):
         image = cls.prepare_image( image )
         
         all_results = []
         
         ## 1 OTSU
         res = cls.segm_Otsu( image )
+        if _postprocess_mask: res = cls.segm_fin( res )
+        if _apply_mask:       res = cls.apply_mask( image, res )
         all_results.append( res )
 
         ## 2 THRESH_BINARY
-        for val in [100, 110, 120, 130, 140, 150]:
+        range_binary = create_range( start=80, number=6, step=20 )
+        for val in range_binary:
             res = cls.segm_Binary( image, thres_val=val )
+            if _postprocess_mask: res = cls.segm_fin( res )
+            if _apply_mask:       res = cls.apply_mask( image, res )
             all_results.append( res )
 
         ## 3 ADAPTIVE_THRESHOLD
         for method in [ 'mean', 'gaussian' ]:
         
-            base_blockSize = 5
-            step_blockSize = 10
-            range_blockSize = range(base_blockSize, base_blockSize+step_blockSize*3, step_blockSize)
-            base_param2 = 3
-            step_param2 = 2
-            range_param2 = range(base_param2, base_param2+step_param2*3, step_param2)
+            range_blockSize = create_range( start=5, number=3, step=10 )
+            range_param2 = create_range( start=3, number=3, step=2 )
             
             for param1 in range_blockSize:
                 for param2 in range_param2:
                     res = cls.segm_Adaptive( image, _method=method, _block_size=param1, _subtr=param2 )
+                    if _postprocess_mask: res = cls.segm_fin( res )
+                    if _apply_mask:       res = cls.apply_mask( image, res )
                     all_results.append( res )
                     # res = cls.segm_Binary( res, thres_val=150 )
                     # all_results.append( res )

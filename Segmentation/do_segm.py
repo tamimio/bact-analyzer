@@ -2,27 +2,26 @@
 print('Running do_segm.py')
 
 from SampleMaker import SampleMaker
+from DatasetSegmentator import DatasetSegmentator
 
 DATASET_PATH  = '/media/DISK3/Bacteria_db/2021_2022/splitted/'
 SAMPLES_COUNT = 15
 
-sample_maker = SampleMaker( DATASET_PATH, samples_number = SAMPLES_COUNT )
-
 ### SAMPLES FOR 1 IMAGE
 
-sample_maker.process_image( DATASET_PATH+'train/Candida albicans/2.jpeg' )
+SampleMaker.process_image( DATASET_PATH+'train/Candida albicans/2.jpeg', full_sample=False )
 
 ### SAMPLES FOR 1 CLASS
 
-#sample_maker.process_class( class_name='Acinetobacter baumannii' )
+segmentator = DatasetSegmentator( DATASET_PATH, samples_number = SAMPLES_COUNT )
+segmentator.sample_class( 'Candida albicans' )
 
 ### SAMPLES FOR ALL CLASSES IN SET
 
-#sample_maker.process_set( set_type='train' )
+#segmentator.sample_set( set_type='train' )
 
 ### SAMPLES FOR WHOLE DATASET
 
-#for set_type in ['train', 'test']:
-#    sample_maker.process_set( set_type=set_type )
+#segmentator.sample_dataset()
 
 print('do_segm.py finished')

@@ -50,8 +50,12 @@ class Segmentator:
         return res.astype(np.uint8)
 
     @classmethod
+    def invert_mask( cls, mask ):
+        return cv2.bitwise_not( mask )
+
+    @classmethod
     def apply_mask( cls, image, mask_inv ):
-        return cv2.bitwise_and( image, image, mask = cv2.bitwise_not(mask_inv) )
+        return cv2.bitwise_and( image, image, mask = cv2.bitwise_not(mask_inv) ) # use invert_mask
 
     @classmethod
     def process( cls, image, _postprocess_mask=False, _apply_mask=False ):

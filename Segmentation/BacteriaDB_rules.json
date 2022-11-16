@@ -1,0 +1,11 @@
+{
+  "Citrobacter braakii": {
+    "method":       "Adaptive",
+    "params":       ["mean",5,7],
+    "postproc_acc": 0.01
+  },
+  "2": {
+    "method": "2",
+    "params": [5,7]
+  }
+}

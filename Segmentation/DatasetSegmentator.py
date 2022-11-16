@@ -2,28 +2,33 @@ from SampleMaker import SampleMaker
 from Segmentator import Segmentator
 
 import os
+import numpy as np
 from pathlib import Path
+from PIL import Image
+
+from utils import open_image
 
 class DatasetSegmentator:
 
-    def __init__( self, db_path, res_path = './segmented/', sample_path = './samples/', samples_number = 15 ):
+    def __init__( self, db_path, mask_path = './masks/', segm_path = './segmented/', sample_path = './samples/', samples_number = 15 ):
         self.db_path        = db_path
-        self.res_path       = res_path
+        self.mask_path      = mask_path
         self.sample_path    = sample_path
         self.samples_number = samples_number
+        self.segm_path      = segm_path
         
-        Path( self.res_path    ).mkdir(parents=True, exist_ok=True)
+        Path( self.mask_path    ).mkdir(parents=True, exist_ok=True)
         Path( self.sample_path ).mkdir(parents=True, exist_ok=True)
         
         print(f'[DatasetSegmentator] Source path: {self.db_path}')
-        print(f'[DatasetSegmentator] Result path: {self.res_path}')
+        print(f'[DatasetSegmentator] Result path: {self.mask_path}')
         print(f'[DatasetSegmentator] Samples path: {self.sample_path}; Number of samples: {self.samples_number}')
 
     def __del__( self ):
-        if len( os.listdir(self.res_path   ) ) == 0: os.rmdir( self.res_path )
+        if len( os.listdir(self.mask_path   ) ) == 0: os.rmdir( self.mask_path )
         if len( os.listdir(self.sample_path) ) == 0: os.rmdir( self.sample_path )
 
-    # SAMPLING
+    ### --- SAMPLING ---
 
     def sample_class( self, class_name, set_type='train' ):
         print ( f'[DatasetSegmentator] Creating samples for {set_type} set of {class_name}...' )
@@ -51,6 +56,7 @@ class DatasetSegmentator:
         directory = self.db_path + set_type
         
         for subdir, dirs, files in os.walk(directory):
+            print(dirs)
             for species in dirs:
                 self.sample_class( species, set_type )
 
@@ -58,13 +64,96 @@ class DatasetSegmentator:
         for set_type in [ 'test', 'train' ]:
             self.sample_set( set_type=set_type )
 
-    # FULL PROCESSING
+    ### --- FULL PROCESSING (CREATE MASK) ---
+    
+    def process_image_by_class_rules( self, image, class_name ): # create mask
+        
+        if (class_name=='Citrobacter braakii'):
+            mask = Segmentator.segm_Adaptive( image, _method='mean', _block_size=5, _subtr=7 )
+            mask = Segmentator.postproc_mask_1 ( mask, _acc=0.01 )
+            segm = Segmentator.apply_mask( image, mask )
+        
+        return mask, segm
 
     def process_class( self, class_name, set_type='train' ):
-        pass
+        print(f'[DatasetSegmentator] process_class {class_name}')
+        src_directory  = f'{self.db_path}{set_type}/{class_name}'
+        mask_directory = f'{self.mask_path}{set_type}/{class_name}'
+        segm_directory = f'{self.segm_path}{set_type}/{class_name}'
+        
+        # create folders
+        Path(f'{mask_directory}').mkdir(parents=True, exist_ok=True)
+        Path(f'{segm_directory}').mkdir(parents=True, exist_ok=True)
+        
+        for file in os.listdir(src_directory):
+            
+            filename = os.fsdecode(file)
+            src_filename = f'{src_directory}/{filename}'
+            print( src_filename )
+            
+            img_orig, img_bw = open_image( src_filename )
+            
+            mask, segm = self.process_image_by_class_rules( img_bw, class_name )
+            
+            dst_filename = f'{mask_directory}/mask_{filename}'
+            print( dst_filename )
+            
+            mask = Image.fromarray(np.uint8(mask)).convert('RGB')
+            mask.save( dst_filename )
+            
+            
+            segm_filename = f'{segm_directory}/segm_{filename}'
+            print( segm_filename )
+            
+            segm = Image.fromarray(np.uint8(segm)).convert('RGB')
+            segm.save( segm_filename )
+            
         
     def process_set( self, set_type='train' ):
-        pass
+        print(f'[DatasetSegmentator] process_set {set_type}')
+        directory = self.db_path + set_type
+        
+        for subdir, dirs, files in os.walk(directory):
+            for species in dirs:
+                self.process_class( species, set_type )
         
     def process_dataset( self ):
-        pass
+        print('[DatasetSegmentator] process_dataset')
+        for set_type in [ 'test', 'train' ]:
+            self.process_set( set_type=set_type )
+            
+            
+    def apply_mask( self ):
+        print('[DatasetSegmentator] apply_mask')
+        for set_type in [ 'test', 'train' ]:
+            directory = self.db_path + set_type
+            
+            for subdir, dirs, files in os.walk(directory):
+                for class_name in dirs:
+                    src_directory  = f'{self.db_path}{set_type}/{class_name}'
+                    mask_directory = f'{self.mask_path}{set_type}/{class_name}'
+                    
+                    # create folder
+                    segm_directory = f"{self.segm_path}{set_type}/{class_name}"
+                    Path(f'{segm_directory}').mkdir(parents=True, exist_ok=True)
+                    
+                    for file in os.listdir(src_directory):
+                        
+                        filename = os.fsdecode(file)
+                        img_filename  = f'{src_directory}/{filename}'
+                        mask_filename = f'{mask_directory}/mask_{filename}'
+                        segm_filename = f'{segm_directory}/segm_{filename}'
+                        
+                        if not Path(mask_filename).exists():
+                            continue
+                        
+                        image, _ = open_image( img_filename )
+                        mask, _ = open_image( mask_filename )
+                        
+                        print(img_filename)
+                        print(mask_filename)
+                        print(segm_filename)
+                        
+                        segm = Segmentator.apply_mask( image, mask )
+                        segm = Image.fromarray(np.uint8(segm)).convert('RGB')
+                        segm.save( segm_filename )

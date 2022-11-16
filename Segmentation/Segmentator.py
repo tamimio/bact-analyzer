@@ -2,6 +2,7 @@ from utils import create_range
 
 import cv2
 import numpy as np
+from PIL import Image, ImageFilter
 
 class Segmentator:
     @classmethod
@@ -24,7 +25,7 @@ class Segmentator:
         return res
 
     @classmethod
-    def segm_Binary( cls, image, thres_val=-1 ):
+    def segm_Binary( cls, image, thres_val=100 ):
         image = cls.prepare_image( image )
         ret,res = cv2.threshold(image, thres_val, 255, cv2.THRESH_BINARY)
         return res
@@ -40,7 +41,7 @@ class Segmentator:
         return res
 
     @classmethod
-    def segm_fin( cls, image, _acc=0.01 ): # base: https://www.askpython.com/python/examples/image-segmentation
+    def postproc_mask_1( cls, image, _acc=0.02 ): # base: https://www.askpython.com/python/examples/image-segmentation
         kernel = np.ones((2, 2), np.uint8)
         closing = cv2.morphologyEx(image, cv2.MORPH_CLOSE,kernel, iterations = 1)
         bg = cv2.dilate(closing, kernel, iterations = 1)
@@ -60,7 +61,7 @@ class Segmentator:
         
         ## 1 OTSU
         res = cls.segm_Otsu( image )
-        if _postprocess_mask: res = cls.segm_fin( res )
+        if _postprocess_mask: res = cls.postproc_mask_1( res )
         if _apply_mask:       res = cls.apply_mask( image, res )
         all_results.append( res )
 
@@ -68,7 +69,7 @@ class Segmentator:
         range_binary = create_range( start=80, number=6, step=20 )
         for val in range_binary:
             res = cls.segm_Binary( image, thres_val=val )
-            if _postprocess_mask: res = cls.segm_fin( res )
+            if _postprocess_mask: res = cls.postproc_mask_1( res )
             if _apply_mask:       res = cls.apply_mask( image, res )
             all_results.append( res )
 
@@ -81,10 +82,18 @@ class Segmentator:
             for param1 in range_blockSize:
                 for param2 in range_param2:
                     res = cls.segm_Adaptive( image, _method=method, _block_size=param1, _subtr=param2 )
-                    if _postprocess_mask: res = cls.segm_fin( res )
-                    if _apply_mask:       res = cls.apply_mask( image, res )
+                    
+                    res = Image.fromarray(res.astype('uint8'))
+                    
+                    res = res.filter(ImageFilter.GaussianBlur(1))
+                    res = np.array(res)
+                    #print( type(res) )
+                    #res = cls.segm_Otsu( res )
+                    #res = cls.segm_Binary( res, thres_val=100 )
+                    #if _postprocess_mask:
+                    #res = cls.postproc_mask_1( res )
+                    #if _apply_mask:       
+                    res = cls.apply_mask( image, res )
                     all_results.append( res )
-                    # res = cls.segm_Binary( res, thres_val=150 )
-                    # all_results.append( res )
 
         return all_results

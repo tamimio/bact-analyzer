@@ -40,7 +40,7 @@ class SampleMaker:
             grid_masked=[]
             grid_masked = cls.add_to_grid( [img_orig, image], grid_masked )
 
-            samples = Segmentator.process( image, _postprocess_mask=True, _apply_mask=True )
+            samples = Segmentator.process( image, _postprocess_mask=False, _apply_mask=True )
             grid_masked = cls.add_to_grid( samples, grid_masked )
             im_masked = cls.create_grid( grid_masked )
             

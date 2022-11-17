@@ -44,7 +44,7 @@ class DatasetSegmentator:
         rules = json.load(f)
         f.close()
         
-        ok = class_name in rules
+        ok = class_name in rules and rules[class_name]["method"] in ["Adaptive"]
         
         return rules, ok
 
@@ -101,7 +101,7 @@ class DatasetSegmentator:
                 
         #    #segm = Segmentator.apply_mask( image, mask )
         
-        mask = Segmentator.invert_mask( mask )
+            mask = Segmentator.invert_mask( mask )
             
         return mask#, segm
 

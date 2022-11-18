@@ -6,6 +6,7 @@ import numpy as np
 from pathlib import Path
 from PIL import Image
 import json
+import datetime
 
 from utils import open_image
 
@@ -28,12 +29,15 @@ class DatasetSegmentator:
         Path( self.mask_path    ).mkdir(parents=True, exist_ok=True)
         Path( self.sample_path ).mkdir(parents=True, exist_ok=True)
         
+        print(f'[DatasetSegmentator] Start:        {datetime.datetime.now().strftime("%H:%M:%S")}')
         print(f'[DatasetSegmentator] Source path:  {self.db_path}')
         print(f'[DatasetSegmentator] Masks path:   {self.mask_path}')
         print(f'[DatasetSegmentator] Rules:        {self.rules_filename}')
         print(f'[DatasetSegmentator] Samples path: {self.sample_path}; Number of samples: {self.samples_number}')
 
     def __del__( self ):
+        print(f'[DatasetSegmentator] Finish:       {datetime.datetime.now().strftime("%H:%M:%S")}')
+        
         if len( os.listdir(self.mask_path   ) ) == 0: os.rmdir( self.mask_path )
         if len( os.listdir(self.sample_path) ) == 0: os.rmdir( self.sample_path )
 
@@ -101,7 +105,7 @@ class DatasetSegmentator:
                 
         #    #segm = Segmentator.apply_mask( image, mask )
         
-            mask = Segmentator.invert_mask( mask )
+        mask = Segmentator.invert_mask( mask )
             
         return mask#, segm
 
@@ -134,6 +138,9 @@ class DatasetSegmentator:
             dst_filename = f'{mask_directory}/mask_{filename}'
             # print( f'src_filename {src_filename}' )
             # print( f'dst_filename {dst_filename}' )
+            
+            if not filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+                continue
             
             # open image
             img_orig, img_bw = open_image( src_filename )

@@ -14,7 +14,7 @@ SAMPLES_COUNT = 15
 ### SAMPLES FOR 1 CLASS
 
 segmentator = DatasetSegmentator( DATASET_PATH, 
-                                  mask_path = '/media/DISK3/Bacteria_db/2021_2022/masks2/' )
+                                  mask_path = '/media/DISK3/Bacteria_db/2021_2022/masks_DatasetSegmentator/' )
 
 # segmentator.sample_class( 'Citrobacter braakii' )
 
@@ -33,11 +33,11 @@ segmentator = DatasetSegmentator( DATASET_PATH,
 
 ### - SEGMENT SET -
 
-segmentator.process_set( 'train' )
+# segmentator.process_set( 'train' )
 
 ### --- SEGMENT WHOLE DATASET ---
 
-# segmentator.process_dataset()
+segmentator.process_dataset()
 
 
 print('do_segm.py finished')
